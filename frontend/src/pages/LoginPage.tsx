@@ -33,7 +33,12 @@ export default function LoginPage() {
 
   return (
     <div className="login-root">
-      {/* Left — form panel */}
+      {/* Decorative floating circles */}
+      <div className="login-bubble login-bubble-1" />
+      <div className="login-bubble login-bubble-2" />
+      <div className="login-bubble login-bubble-3" />
+
+      {/* Left — glassmorphism form card */}
       <div className="login-form-panel">
         <div className="login-form-inner">
           <div className="login-logo">
@@ -41,8 +46,8 @@ export default function LoginPage() {
             <span className="login-logo-mark">✦</span>
           </div>
 
-          <h1 className="login-title">Login</h1>
-          <p className="login-subtitle">Please login to continue to your account.</p>
+          <h1 className="login-title">Welcome Back</h1>
+          <p className="login-subtitle">Sign in to your account</p>
 
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="login-field">
@@ -98,13 +103,9 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right — 3D animated branding panel */}
+      {/* Right — globe + stat cards */}
       <div className="login-brand-panel">
-        <AnomalousMatterHero
-          title="Your CRM. Your Control."
-          subtitle="Manage leads, clients, and opportunities in one place."
-          description="Real-time insights and powerful tools to drive your business forward. Sign in to access your dashboard."
-        />
+        <AnomalousMatterHero />
       </div>
     </div>
   );
