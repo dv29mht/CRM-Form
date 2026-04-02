@@ -176,7 +176,7 @@
 /* ── Right: branding panel ── */
 .login-brand-panel {
   width: 55%;
-  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,26 +185,19 @@
   overflow: hidden;
 }
 
-.login-brand-panel::before {
-  content: '';
+/* Scoped WebGL canvas wrapper — fills only the right panel */
+.login-brand-canvas {
   position: absolute;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  top: -100px;
-  right: -100px;
+  inset: 0;
+  z-index: 0;
 }
 
-.login-brand-panel::after {
-  content: '';
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  bottom: -80px;
-  left: -60px;
+.login-brand-canvas canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .login-brand-inner {
@@ -212,6 +205,12 @@
   z-index: 1;
   max-width: 440px;
   color: #fff;
+}
+
+.brand-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
 }
 
 .brand-card {

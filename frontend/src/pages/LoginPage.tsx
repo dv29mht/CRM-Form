@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { login } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import { WebGLShader } from '@/components/ui/web-gl-shader';
+import { LiquidButton } from '@/components/ui/liquid-glass-button';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -97,8 +99,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right — branding panel */}
+      {/* Right — WebGL shader branding panel */}
       <div className="login-brand-panel">
+        {/* Full-panel WebGL background (scoped to this panel) */}
+        <div className="login-brand-canvas">
+          <WebGLShader />
+        </div>
+
+        {/* Overlay content */}
         <div className="login-brand-inner">
           <div className="brand-card">
             <h2>Streamline Your Operations</h2>
@@ -126,6 +134,12 @@ export default function LoginPage() {
           <p className="brand-subtagline">
             Sign in to access your CRM dashboard and manage your pipeline effortlessly.
           </p>
+
+          <div className="brand-cta">
+            <LiquidButton className="text-white border border-white/30" size="xl">
+              Learn More
+            </LiquidButton>
+          </div>
         </div>
       </div>
     </div>
