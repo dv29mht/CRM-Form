@@ -1,0 +1,14 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+appsettings.Development.json
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Env
+*.env.local
