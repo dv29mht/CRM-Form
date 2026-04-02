@@ -1,6 +1,56 @@
 import { useRef, useEffect, Suspense } from "react";
 import * as THREE from "three";
 
+// Approximate continent dot positions as [lat, lon] in degrees
+const CONTINENT_DOTS: [number, number][] = [
+  // North America
+  [50, -100], [45, -90], [40, -80], [40, -100], [35, -90], [35, -110],
+  [30, -100], [30, -85], [55, -120], [48, -70], [25, -100], [20, -100],
+  // South America
+  [5, -60], [0, -55], [-10, -55], [-15, -60], [-20, -65], [-25, -65],
+  [-30, -65], [-35, -65], [-40, -65], [10, -70],
+  // Europe
+  [55, 10], [50, 10], [50, 20], [55, 20], [48, 2], [52, 0],
+  [60, 20], [60, 10], [45, 15], [40, 20], [40, 10],
+  // Africa
+  [20, 20], [15, 20], [10, 20], [5, 20], [0, 25], [-5, 25],
+  [-10, 25], [-20, 25], [-30, 25], [30, 20], [25, 30], [10, 10],
+  // Asia
+  [60, 60], [55, 60], [50, 80], [45, 80], [40, 80], [35, 80],
+  [30, 80], [25, 80], [60, 100], [55, 100], [50, 100], [40, 100],
+  [35, 110], [30, 110], [25, 110], [20, 80], [15, 80], [10, 78],
+  [35, 60], [30, 60], [40, 60], [50, 40], [40, 40], [35, 40],
+  // Australia
+  [-25, 135], [-30, 135], [-20, 135], [-25, 125], [-35, 148],
+  [-30, 148], [-25, 148],
+  // Japan / SE Asia
+  [35, 138], [34, 136], [36, 140], [15, 100], [10, 105], [5, 110],
+];
+
+function buildContinentDots(R: number): THREE.Points {
+  const positions: number[] = [];
+  CONTINENT_DOTS.forEach(([lat, lon]) => {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+    const r = R + 0.01;
+    positions.push(
+      r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),
+      r * Math.sin(phi) * Math.sin(theta)
+    );
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.055,
+    transparent: true,
+    opacity: 0.75,
+    sizeAttenuation: true,
+  });
+  return new THREE.Points(geo, mat);
+}
+
 export function GlobeScene() {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -10,130 +60,80 @@ export function GlobeScene() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
-      60,
+      50,
       currentMount.clientWidth / currentMount.clientHeight,
       0.1,
       1000
     );
-    camera.position.z = 3.5;
+    camera.position.z = 4;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(currentMount.clientWidth, currentMount.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setClearColor(0x000000, 0); // transparent bg
+    renderer.setClearColor(0x000000, 0);
     currentMount.appendChild(renderer.domElement);
 
-    // Globe geometry
-    const geometry = new THREE.SphereGeometry(1.3, 64, 64);
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 },
-        color1: { value: new THREE.Color("#1a73e8") },
-        color2: { value: new THREE.Color("#ffffff") },
-      },
-      vertexShader: `
-        uniform float time;
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
+    const R = 1.4;
+    const group = new THREE.Group();
+    scene.add(group);
 
-        vec3 mod289(vec3 x) { return x - floor(x * (1.0/289.0))*289.0; }
-        vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0))*289.0; }
-        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314*r; }
-        float snoise(vec3 v) {
-          const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-          const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-          vec3 i  = floor(v + dot(v, C.yyy));
-          vec3 x0 = v - i + dot(i, C.xxx);
-          vec3 g = step(x0.yzx, x0.xyz);
-          vec3 l = 1.0 - g;
-          vec3 i1 = min(g.xyz, l.zxy);
-          vec3 i2 = max(g.xyz, l.zxy);
-          vec3 x1 = x0 - i1 + C.xxx;
-          vec3 x2 = x0 - i2 + C.yyy;
-          vec3 x3 = x0 - D.yyy;
-          i = mod289(i);
-          vec4 p = permute(permute(permute(
-            i.z + vec4(0.0, i1.z, i2.z, 1.0))
-            + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-            + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-          float n_ = 0.142857142857;
-          vec3 ns = n_ * D.wyz - D.xzx;
-          vec4 j = p - 49.0*floor(p*ns.z*ns.z);
-          vec4 x_ = floor(j*ns.z);
-          vec4 y_ = floor(j - 7.0*x_);
-          vec4 x = x_*ns.x + ns.yyyy;
-          vec4 y = y_*ns.x + ns.yyyy;
-          vec4 h = 1.0 - abs(x) - abs(y);
-          vec4 b0 = vec4(x.xy, y.xy);
-          vec4 b1 = vec4(x.zw, y.zw);
-          vec4 s0 = floor(b0)*2.0 + 1.0;
-          vec4 s1 = floor(b1)*2.0 + 1.0;
-          vec4 sh = -step(h, vec4(0.0));
-          vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-          vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-          vec3 p0 = vec3(a0.xy, h.x);
-          vec3 p1 = vec3(a0.zw, h.y);
-          vec3 p2 = vec3(a1.xy, h.z);
-          vec3 p3 = vec3(a1.zw, h.w);
-          vec4 norm = taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
-          p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-          vec4 m = max(0.6 - vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)), 0.0);
-          m = m*m;
-          return 42.0*dot(m*m, vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
-        }
-
-        void main() {
-          vNormal = normal;
-          vPosition = position;
-          vUv = uv;
-          // Very subtle displacement to keep globe shape
-          float d = snoise(position * 1.5 + time * 0.3) * 0.06;
-          vec3 newPos = position + normal * d;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 color1;
-        uniform vec3 color2;
-        uniform float time;
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
-
-        void main() {
-          vec3 normal = normalize(vNormal);
-          // Fresnel rim glow
-          float fresnel = 1.0 - dot(normal, vec3(0.0, 0.0, 1.0));
-          fresnel = pow(fresnel, 1.8);
-
-          // Latitude lines
-          float lat = abs(sin(vPosition.y * 10.0));
-          float lon = abs(sin(atan(vPosition.z, vPosition.x) * 8.0));
-          float grid = smoothstep(0.92, 1.0, lat) + smoothstep(0.92, 1.0, lon);
-          grid = clamp(grid, 0.0, 1.0);
-
-          vec3 baseColor = mix(color1 * 0.6, color1, fresnel);
-          vec3 gridColor = mix(baseColor, color2, grid * 0.6);
-          vec3 rimColor = mix(gridColor, vec3(0.5, 0.8, 1.0), fresnel * 0.5);
-
-          gl_FragColor = vec4(rimColor, 0.92);
-        }
-      `,
+    // ── Solid globe base ──
+    const sphereMat = new THREE.MeshPhongMaterial({
+      color: new THREE.Color("#1040a0"),
+      emissive: new THREE.Color("#071a4a"),
+      specular: new THREE.Color("#4488ff"),
+      shininess: 80,
       transparent: true,
-      side: THREE.FrontSide,
+      opacity: 0.97,
     });
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R, 64, 64), sphereMat));
 
-    const globe = new THREE.Mesh(geometry, material);
-    scene.add(globe);
+    // ── Ocean tint layer (subtle lighter blue) ──
+    const oceanMat = new THREE.MeshPhongMaterial({
+      color: new THREE.Color("#1a5fd4"),
+      emissive: new THREE.Color("#0a2a70"),
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R + 0.002, 64, 64), oceanMat));
 
-    // Atmosphere glow
-    const atmosGeo = new THREE.SphereGeometry(1.42, 64, 64);
+    // ── Latitude lines ──
+    const latMat = new THREE.LineBasicMaterial({ color: 0xaaccff, transparent: true, opacity: 0.2 });
+    for (let i = 1; i < 12; i++) {
+      const phi = (i / 12) * Math.PI;
+      const r = R * Math.sin(phi);
+      const y = R * Math.cos(phi);
+      const pts: THREE.Vector3[] = [];
+      for (let j = 0; j <= 128; j++) {
+        const t = (j / 128) * Math.PI * 2;
+        pts.push(new THREE.Vector3(r * Math.cos(t), y, r * Math.sin(t)));
+      }
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), latMat));
+    }
+
+    // ── Longitude lines ──
+    const lonMat = new THREE.LineBasicMaterial({ color: 0xaaccff, transparent: true, opacity: 0.2 });
+    for (let i = 0; i < 16; i++) {
+      const theta = (i / 16) * Math.PI * 2;
+      const pts: THREE.Vector3[] = [];
+      for (let j = 0; j <= 128; j++) {
+        const phi = (j / 128) * Math.PI;
+        pts.push(new THREE.Vector3(
+          R * Math.sin(phi) * Math.cos(theta),
+          R * Math.cos(phi),
+          R * Math.sin(phi) * Math.sin(theta)
+        ));
+      }
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lonMat));
+    }
+
+    // ── Continent dots ──
+    group.add(buildContinentDots(R));
+
+    // ── Atmosphere glow ──
     const atmosMat = new THREE.ShaderMaterial({
-      uniforms: {
-        color: { value: new THREE.Color("#4da6ff") },
-      },
+      uniforms: { glowColor: { value: new THREE.Color("#4488ff") } },
       vertexShader: `
         varying vec3 vNormal;
         void main() {
@@ -142,29 +142,33 @@ export function GlobeScene() {
         }
       `,
       fragmentShader: `
-        uniform vec3 color;
+        uniform vec3 glowColor;
         varying vec3 vNormal;
         void main() {
-          float intensity = pow(0.65 - dot(vNormal, vec3(0,0,1.0)), 3.0);
-          gl_FragColor = vec4(color, intensity * 0.6);
+          float intensity = pow(0.55 - dot(vNormal, vec3(0,0,1.0)), 3.0);
+          gl_FragColor = vec4(glowColor, clamp(intensity * 0.8, 0.0, 1.0));
         }
       `,
       side: THREE.BackSide,
       transparent: true,
       blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
-    scene.add(new THREE.Mesh(atmosGeo, atmosMat));
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(R * 1.2, 64, 64), atmosMat));
 
-    // Ambient + directional light
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const dirLight = new THREE.DirectionalLight(0x88ccff, 1.2);
-    dirLight.position.set(5, 3, 5);
-    scene.add(dirLight);
+    // ── Lights ──
+    scene.add(new THREE.AmbientLight(0x223366, 0.8));
+    const key = new THREE.DirectionalLight(0x99bbff, 2.0);
+    key.position.set(5, 3, 5);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0x4466aa, 0.5);
+    fill.position.set(-4, -2, 2);
+    scene.add(fill);
 
+    // ── Animation ──
     let frameId: number;
-    const animate = (t: number) => {
-      material.uniforms.time.value = t * 0.0003;
-      globe.rotation.y += 0.0015;
+    const animate = () => {
+      group.rotation.y += 0.0018;
       renderer.render(scene, camera);
       frameId = requestAnimationFrame(animate);
     };
@@ -184,8 +188,6 @@ export function GlobeScene() {
       if (currentMount.contains(renderer.domElement)) {
         currentMount.removeChild(renderer.domElement);
       }
-      geometry.dispose();
-      material.dispose();
       renderer.dispose();
     };
   }, []);
@@ -200,29 +202,29 @@ export function AnomalousMatterHero() {
         <GlobeScene />
       </Suspense>
 
-      {/* Heading above globe */}
-      <div className="relative z-10 text-center px-6 mb-4">
+      {/* Heading */}
+      <div className="relative z-10 text-center px-6 mb-6">
         <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight drop-shadow-lg">
-          Manage Your Sales<br />& Grow Your Business
+          Manage Your Sales<br />&amp; Grow Your Business
         </h2>
-        <p className="mt-2 text-sm text-white/75 max-w-xs mx-auto">
+        <p className="mt-2 text-sm text-white/70 max-w-xs mx-auto">
           Track leads, close opportunities, and drive business growth.
         </p>
       </div>
 
-      {/* Floating stat cards */}
-      <div className="relative z-10 flex gap-3 mt-2">
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl px-4 py-3 text-white shadow-lg">
-          <p className="text-xs text-white/70">New Leads</p>
-          <p className="text-xl font-bold">128</p>
+      {/* Stat cards */}
+      <div className="relative z-10 flex gap-3">
+        <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-4 py-3 text-white shadow-lg min-w-[90px] text-center">
+          <p className="text-xs text-white/65 mb-1">New Leads</p>
+          <p className="text-2xl font-bold">128</p>
         </div>
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl px-4 py-3 text-white shadow-lg">
-          <p className="text-xs text-white/70">Opportunities</p>
-          <p className="text-xl font-bold">36</p>
+        <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-4 py-3 text-white shadow-lg min-w-[90px] text-center">
+          <p className="text-xs text-white/65 mb-1">Opportunities</p>
+          <p className="text-2xl font-bold">36</p>
         </div>
-        <div className="bg-white/20 backdrop-blur-md border border-white/30 rounded-xl px-4 py-3 text-white shadow-lg">
-          <p className="text-xs text-white/70">Connected</p>
-          <p className="text-xl font-bold">$23.4K</p>
+        <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-4 py-3 text-white shadow-lg min-w-[90px] text-center">
+          <p className="text-xs text-white/65 mb-1">Connected</p>
+          <p className="text-2xl font-bold">$23.4K</p>
         </div>
       </div>
     </div>
