@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { login } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import { WebGLShader } from '@/components/ui/web-gl-shader';
-import { LiquidButton } from '@/components/ui/liquid-glass-button';
+import { AnomalousMatterHero } from '@/components/ui/anomalous-matter-hero';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -99,48 +98,13 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right — WebGL shader branding panel */}
+      {/* Right — 3D animated branding panel */}
       <div className="login-brand-panel">
-        {/* Full-panel WebGL background (scoped to this panel) */}
-        <div className="login-brand-canvas">
-          <WebGLShader />
-        </div>
-
-        {/* Overlay content */}
-        <div className="login-brand-inner">
-          <div className="brand-card">
-            <h2>Streamline Your Operations</h2>
-            <p>
-              Manage leads, clients, and opportunities in one place. Real-time insights to drive your business forward.
-            </p>
-          </div>
-
-          <div className="brand-stats">
-            <div className="brand-stat">
-              <span className="brand-stat-value">193</span>
-              <span className="brand-stat-label">Total Leads</span>
-            </div>
-            <div className="brand-stat">
-              <span className="brand-stat-value">211</span>
-              <span className="brand-stat-label">Opportunities</span>
-            </div>
-            <div className="brand-stat">
-              <span className="brand-stat-value">88</span>
-              <span className="brand-stat-label">Clients</span>
-            </div>
-          </div>
-
-          <p className="brand-tagline">Your Data, Your Control</p>
-          <p className="brand-subtagline">
-            Sign in to access your CRM dashboard and manage your pipeline effortlessly.
-          </p>
-
-          <div className="brand-cta">
-            <LiquidButton className="text-white border border-white/30" size="xl">
-              Learn More
-            </LiquidButton>
-          </div>
-        </div>
+        <AnomalousMatterHero
+          title="Your CRM. Your Control."
+          subtitle="Manage leads, clients, and opportunities in one place."
+          description="Real-time insights and powerful tools to drive your business forward. Sign in to access your dashboard."
+        />
       </div>
     </div>
   );
