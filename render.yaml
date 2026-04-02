@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: crmform-api
+    runtime: dotnet
+    buildCommand: dotnet publish backend/CRMForm.API/CRMForm.API.csproj -c Release -o out
+    startCommand: dotnet out/CRMForm.API.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: CRMFormAPI
+      - key: Jwt__Audience
+        value: CRMFormClient
+      - key: Jwt__ExpiryMinutes
+        value: "60"
+      - key: Cors__AllowedOrigins__0
+        sync: false
